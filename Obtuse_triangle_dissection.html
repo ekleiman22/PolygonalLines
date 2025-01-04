@@ -1,0 +1,210 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Triangle Dissection</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h3>Draw an Obtuse Triangle and Dissect It</h3>
+    <h3 style="color:red">
+        What is the smallest number of
+        acute-angled triangles into which an obtuse-angled triangle can be dissected?
+    </h3>
+    <h3 style="width:600px;color:blue">
+        Let B be the vertex of the obtuse angle. Mark the incentre of the triangle, D, draw a circle centred on D
+        through the vertex B. Connect D with all points that are intersections of the circle
+        with the sides of the triangle. Also connect 2 such intersections
+        and the dissection is complete in seven pieces.
+    </h3>
+    <p style="width:600px">
+        To draw an <b> obtuse </b> triangle mark 3 its vertices
+    </p>
+        <button onclick="dissectTriangle()">Dissect Triangle</button>
+        <br />
+        <canvas id="triangleCanvas" width="600" height="600"></canvas>
+
+        <script>
+            const eps = 0.01
+            const canvas = document.getElementById('triangleCanvas');
+            const ctx = canvas.getContext('2d');
+
+            let points = [];
+            let incentre = null;
+            let radius = 0;
+
+            canvas.addEventListener('click', (event) => {
+                if (points.length < 3) {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = event.clientX - rect.left;
+                    const y = event.clientY - rect.top;
+                    points.push({ x, y });
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'red';
+                    ctx.fill();
+
+                    if (points.length === 3) {
+                        drawTriangle();
+                    }
+                }
+            });
+
+            function drawTriangle() {
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                ctx.lineTo(points[1].x, points[1].y);
+                ctx.lineTo(points[2].x, points[2].y);
+                ctx.closePath();
+                ctx.strokeStyle = 'black';
+                ctx.stroke();
+            }
+
+            function calculateIncentre() {
+                const [A, B, C] = points;
+
+                const a = Math.hypot(B.x - C.x, B.y - C.y);
+                const b = Math.hypot(A.x - C.x, A.y - C.y);
+                const c = Math.hypot(A.x - B.x, A.y - B.y);
+
+                const px = (a * A.x + b * B.x + c * C.x) / (a + b + c);
+                const py = (a * A.y + b * B.y + c * C.y) / (a + b + c);
+
+                return { x: px, y: py };
+            }
+
+            function dissectTriangle() {
+                if (points.length !== 3) {
+                    alert('Please select exactly 3 points to form a triangle.');
+                    return;
+                }
+
+                incentre = calculateIncentre();
+
+                const B = points[1]; // Vertex of the obtuse angle
+                radius = Math.hypot(incentre.x - B.x, incentre.y - B.y);
+
+                ctx.beginPath();
+                ctx.arc(incentre.x, incentre.y, radius, 0, 2 * Math.PI);
+                ctx.strokeStyle = 'blue';
+                ctx.stroke();
+
+                let intersections =  connectIncentreWithCircleIntersections();
+                connectSomeIntersections(intersections);
+            }
+
+            function connectIncentreWithCircleIntersections() {
+                const intersections = [];
+                const [A, B, C] = points;
+
+                intersections.push(getCircleLineIntersection(incentre, radius, A, B));
+                intersections.push(getCircleLineIntersection(incentre, radius, B, C));
+                intersections.push(getCircleLineIntersection(incentre, radius, C, A));
+
+                intersections.forEach(intersection => {
+                    intersection.forEach(point => {
+                        ctx.beginPath();
+                        ctx.moveTo(incentre.x, incentre.y);
+                        ctx.lineTo(point.x, point.y);
+                        ctx.strokeStyle = 'green';
+                        ctx.stroke();
+                    });
+                });
+                return intersections;
+            }
+            function refl(A, B, C) {
+                // Coordinates of points A, B, and C
+                const [xA, yA] = [A.x,A.y];
+                const [xB, yB] = [B.x, B.y];
+                const [xC, yC] = [C.x,C.y];
+
+                // Coefficients of the line AB: Ax + By + C = 0
+                const A_coef = yB - yA;
+                const B_coef = xA - xB;
+                const C_coef = xB * yA - xA * yB;
+
+                // Compute the reflection of point C
+                const denom = A_coef ** 2 + B_coef ** 2;
+
+                const x = xC - 2 * A_coef * (A_coef * xC + B_coef * yC + C_coef) / denom;
+                const y = yC - 2 * B_coef * (A_coef * xC + B_coef * yC + C_coef) / denom;
+
+                return { x, y }; //[xD, yD];
+            }
+            function dist(p,q) {
+                let d = Math.sqrt((p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y));
+                return d;
+            }
+
+            function connectSomeIntersections(intersections) {
+                
+                //define that points in array intersections that are not B
+                const[A, B, C] = points;
+                let p = intersections[0][0];
+                let q = intersections[0][1];
+                let Pab = p;
+                if (dist(p, B) < eps)
+                    Pab = q;
+                let Pac = refl(A, incentre, Pab);
+                drawSegment(Pab, Pac);
+
+                p = intersections[1][0];
+                q = intersections[1][1];
+                let Pbc = p;
+                if (dist(p, B) < eps)
+                    Pbc = q;
+                Pac = refl(C, incentre, Pbc);
+                drawSegment(Pbc, Pac);
+                
+            }
+
+            function drawSegment(p,q) {
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(q.x, q.y);
+                ctx.strokeStyle = 'green';
+                ctx.stroke();
+            }
+            
+
+            function getCircleLineIntersection(center, radius, point1, point2) {
+                const dx = point2.x - point1.x;
+                const dy = point2.y - point1.y;
+                const A = dx * dx + dy * dy;
+                const B = 2 * (dx * (point1.x - center.x) + dy * (point1.y - center.y));
+                const C = (point1.x - center.x) * (point1.x - center.x) + (point1.y - center.y) * (point1.y - center.y) - radius * radius;
+
+                const det = B * B - 4 * A * C;
+                if (det < 0) {
+                    return [];
+                }
+
+                const t1 = (-B + Math.sqrt(det)) / (2 * A);
+                const t2 = (-B - Math.sqrt(det)) / (2 * A);
+
+                const intersections = [];
+                //if (t1 >= 0 && t1 <= 1) 
+                if (checkCondition)(t1)
+                {
+                    intersections.push({ x: point1.x + t1 * dx, y: point1.y + t1 * dy });
+                }
+                //if (t2 >= 0 && t2 <= 1) 
+                if (checkCondition) (t2)
+                {
+                    intersections.push({ x: point1.x + t2 * dx, y: point1.y + t2 * dy });
+                }
+
+                return intersections;
+            }
+            function checkCondition(t) {
+                if (Math.abs(t) < eps && Math.abs(t - 1) < eps)
+                    return true;
+                else return false;
+            }
+        </script>
+</body>
+</html>
