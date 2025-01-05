@@ -1,0 +1,141 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apollonius Circle</title>
+    <h3>
+        The problem of constructing a circle which will
+        touch each of three given circles was first proposed and solved by Apollonius
+        of Perga. In the most general case, there are 8 solutions: one circle
+        which touches all three without surrounding any of them, one circle which
+        touches and surrounds all three, three circles which surround one of the
+        circles and three which surround two of them
+    </h3>
+    <h4>
+        To bild <span style='color: #0000FF;'>Apollonius Circle</span>  you have to build firstly 3 arbitrary circles.
+        For building of a circle make mouse down in a point, move the mouse and make mouse up.
+        <br />
+        Then click the button. To select one of 8 solutions use in check boxes
+    </h4>
+    <style>
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 20px auto;
+        }
+
+        #controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <button id="drawApollonius" disabled>Draw Apollonius Circle</button>
+        <input id="chk1" type="checkbox" checked />
+        <input id="chk2" type="checkbox" checked />
+        <input id="chk3" type="checkbox" checked />
+    </div>
+
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <script src="circle_scripts.js"></script>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const circles = [];
+        let currentCircle = null;
+
+        function distance(p1, p2) {
+            return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+        }
+
+        function drawCircle(x, y, radius, color = 'black') {
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+        /*This function was built by ChatGPT and is not in use
+        */
+        function solveApollonius(c1, c2, c3) {
+            const { x: x1, y: y1, r: r1 } = c1;
+            const { x: x2, y: y2, r: r2 } = c2;
+            const { x: x3, y: y3, r: r3 } = c3;
+
+            // System of equations to find the Apollonius circle
+            const A = 2 * (x2 - x1);
+            const B = 2 * (y2 - y1);
+            const C = x1 ** 2 + y1 ** 2 - x2 ** 2 - y2 ** 2 - r1 ** 2 + r2 ** 2;
+
+            const D = 2 * (x3 - x1);
+            const E = 2 * (y3 - y1);
+            const F = x1 ** 2 + y1 ** 2 - x3 ** 2 - y3 ** 2 - r1 ** 2 + r3 ** 2;
+
+            const denominator = A * E - B * D;
+
+            if (Math.abs(denominator) < 1e-10) {
+                alert("Failed to compute Apollonius circle: degenerate configuration.");
+                return null;
+            }
+
+            const centerX = (C * E - F * B) / denominator;
+            const centerY = (C * D - A * F) / denominator;
+
+            const r4 = Math.abs(distance({ x: centerX, y: centerY }, c1) - r1);
+
+            return { x: centerX, y: centerY, r: r4 };
+        }
+
+        canvas.addEventListener('mousedown', (event) => {
+            if (circles.length >= 3) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const centerX = event.clientX - rect.left;
+            const centerY = event.clientY - rect.top;
+            currentCircle = { x: centerX, y: centerY, r: 0 };
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (!currentCircle) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const currentX = event.clientX - rect.left;
+            const currentY = event.clientY - rect.top;
+
+            currentCircle.r = distance(currentCircle, { x: currentX, y: currentY });
+
+            // Redraw canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            circles.forEach(circle => drawCircle(circle.x, circle.y, circle.r));
+            drawCircle(currentCircle.x, currentCircle.y, currentCircle.r, 'blue');
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (currentCircle) {
+                circles.push(currentCircle);
+                currentCircle = null;
+
+                if (circles.length === 3) {
+                    document.getElementById('drawApollonius').disabled = false;
+                }
+            }
+        });
+
+        document.getElementById('drawApollonius').addEventListener('click', () => {
+            if (circles.length !== 3) return;
+            let s1 = document.getElementById('chk1').checked ? 1 : -1;
+            let s2 = document.getElementById('chk2').checked ? 1 : -1;
+            let s3 = document.getElementById('chk3').checked ? 1 : -1;
+            const apolloniusCircle = apollonius(circles[0], circles[1], circles[2], s1, s2, s3);
+            if (apolloniusCircle) {
+                drawCircle(apolloniusCircle.x, apolloniusCircle.y, apolloniusCircle.r, 'red');
+            }
+        });
+
+    </script>
+
+</body>
+</html>
