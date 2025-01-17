@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 20px auto;
+        }
+
+        #controls {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: large
+        }
+    </style>
+    <script src="GeometryCalc.js"></script>
+    <script src="DrawingScripts.js"></script>
+    <script src="TriangleScripts.js"></script>
+</head>
+<body>
+    <div id="controls">
+        <p>
+               Mark 3 points on the canvas to build a triangle        
+        </p>
+        <button id="drawMedians">Draw Medians</button>
+        <button id="drawBisectors">Draw Bisectorsh A</button>
+        <button id="drawHeights">Draw Heights</button>
+        <button id="clearLines">clear Lines/button>
+</div>
+    <canvas id="triangleCanvas" width="800" height="600"></canvas>
+
+</body>
+</html>

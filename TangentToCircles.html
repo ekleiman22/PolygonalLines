@@ -1,0 +1,169 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Common Tangents with Visualizations</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 20px auto;
+        }
+
+        #controls {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: large
+        }
+    </style>
+    <script src="DrawingScripts.js"></script>
+    <script src="GeometryCalc.js"></script>
+</head>
+<body>
+    <div id="controls">
+        <p>
+            Demonstration of constructing common external tangents to two circles.<br />
+            Click the mouse at any point and, without releasing it,
+            move it to another point. Repeat. You will get two circles.<br />
+            Then click the buttons
+        </p>
+        <button id="drawTangent1" disabled>Draw Tangent through B</button>
+        <button id="drawTangent2" disabled>Draw Tangent through A</button>
+    </div>
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        var circles = [];
+        let currentCircle = null;
+
+       
+
+       
+       
+     
+        // Draw tangent to two circles
+        function drawTangent(c1, c2, throughPoint) {
+            let r1 = c1.radius;
+            let r2 = c2.radius;
+            const deltaR = Math.abs(r2 - r1);
+            
+            const r3 = deltaR;
+            //draw circle with center of c2 and radius deltaR
+            const c3 = new Circle(c2.center, r3); 
+            drawCircle(c3, "green");
+
+            const mid = midpoint(c1.center, c2.center);
+            const bigRadius = distance(mid, c2.center);
+            drawLine(c1.center, c2.center, 'black');
+
+            //drawPoint(mid, 'green'); // Midpoint O3
+            const c4 = new Circle(mid, bigRadius);
+            drawCircle(c4, 'orange');
+
+            const intersections = circleIntersections(c3, c4);
+            if (intersections.length < 2) return;
+
+            const [A, B] = intersections;
+            drawPoint(A, 'purple'); // Intersection A
+            drawPoint(B, 'purple'); // Intersection B
+
+            const target = throughPoint === 'B' ? B : A;
+
+            // Calculate D on c2
+            const vector = { x: target.x - c2.center.x, y: target.y - c2.center.y };
+            const scale = r2 / distance(target, c2.center);
+            const D = { x: c2.center.x + vector.x * scale, y: c2.center.y + vector.y * scale };
+            drawPoint(D, 'blue'); // Point D
+            drawRay(c2.center, D, 'green'); // Ray O2D
+
+            // Find C on c1
+            let scale2 = r2 / r1;            
+            const parallelVector = {
+                x: (D.x - c2.center.x) / scale2,
+                y: (D.y - c2.center.y)/scale2
+            };            
+            
+            const C = new Point(c1.center.x + parallelVector.x,
+                c1.center.y + parallelVector.y);
+            drawPoint(C, 'blue'); // Point C
+            drawRay(c1.center, C, 'green'); // Ray O1D
+            drawLine(D, C, 'black'); // Tangent line CD
+        }
+
+        // Event listeners for drawing circles
+        canvas.addEventListener('mousedown', (e) => {
+            if (circles.length < 2) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                let center = new Point(x, y);
+                currentCircle = new Circle(center, 0);               
+                drawPoint(center, 'black'); 
+                circles.push(currentCircle);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (currentCircle) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                currentCircle.radius = distance(currentCircle.center, { x, y });
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                for (let circle of circles) {
+                    if (currentCircle.id == circle.id) {
+                        circle = currentCircle;
+                        break;
+                    }
+                }
+
+                for (const circle of circles) {                   
+                    drawCircle(circle, 'blue');
+                    
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {            
+            currentCircle = null;
+           
+            if (circles.length === 2) {  
+                //sort circles by rasius
+                if (circles[0].radius > circles[1].radius) {
+                    let temp = [];
+                    temp.push(circles[1]);
+                    temp.push(circles[0]);
+                    circles = temp;
+                }
+                document.getElementById('drawTangent1').disabled = false;
+                document.getElementById('drawTangent2').disabled = false;
+            }                
+            
+        });
+
+        // Draw tangents based on the selected point
+        document.getElementById('drawTangent1').addEventListener('click', () => {
+            if (circles.length === 2) {
+                const [c1, c2] = circles;
+                drawTangent(c1, c2, 'B');
+            }
+        });
+
+        document.getElementById('drawTangent2').addEventListener('click', () => {
+            if (circles.length === 2) {
+                const [c1, c2] = circles;
+                drawTangent(c1,  c2,  'A');
+            }
+        });
+    </script>
+    <script>
+
+        
+
+    </script>
+</body>
+</html>
