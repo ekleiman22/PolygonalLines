@@ -1,0 +1,288 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moving Points and Persistent Bisectors</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 10px 0px 20px 10px;
+        }
+
+        #controls {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .flex-container {
+            display: flex;
+            flex-direction: row;
+        }
+    </style>
+</head>
+<body>
+    <div class ="flex-container">
+        <div style="width:400px;">
+            <b>Problem</b>.Points P and Q move with the same constant speed v along two lines intersecting at point O. Prove that on the plane there exists a fixed point A, the distances from which to points P and Q are equal at any moment in time.
+            <br />
+            <hr />
+            It's clear that if such point exists that it should belong to perpendicular bisectors to segment PQ for any positions of P and Q. This demo shows that such point really exists.
+            <hr />
+            Click at 2 places to define line OP. Then click in anothe place to define point Q. Then click button Start
+        </div>
+        
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+
+        <div id="controls">
+            <label for="speed">Speed (pixels/second): </label>
+            <input type="number" id="speed" value="50">
+            <button id="startButton">Start</button>
+            <button id="stopButton">Stop</button>
+            <button id="stepButton">One step</button>
+
+        </div>
+
+        <script>
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            let pointO = null;
+            let pointP = null;
+            let pointQ = null;
+            let animationInterval = null;
+            let speed = 50; // Default speed in pixels/second
+            const bisectors = []; // Store bisectors for persistent drawing
+            const bisectorsExt = []; // Store bisectors with P,Q
+            let isfirstMidPoint = true;
+            let focus = null;
+            let bisCount = 0; // counts pf bisectors
+            let firstP = null;
+            let firstQ = null;
+
+            // Draw a point
+            function drawPoint(x, y, label, color = 'black') {
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.fillText(label, x + 10, y);
+            }
+
+            // Draw a line
+            function drawExtendedLine(p1, p2, color = 'black') {
+                ctx.beginPath();
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const unitX = dx / length;
+                const unitY = dy / length;
+
+                const startX = p1.x - unitX * 1000; // Extend far beyond canvas
+                const startY = p1.y - unitY * 1000;
+                const endX = p1.x + unitX * 1000;
+                const endY = p1.y + unitY * 1000;
+
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // Clear the canvas
+            function clearCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Draw all persistent bisectors
+            function drawBisectors() {
+                bisectors.forEach(bisector => {
+                    ctx.setLineDash([5, 5]);
+                    drawExtendedLine(bisector.start, bisector.end, 'green');
+                    ctx.setLineDash([]);
+                });
+            }
+            function drawBisectorsExt() {
+                bisectors.forEach(bisector => {
+                    ctx.setLineDash([5, 5]);
+                    drawExtendedLine(bisector.start, bisector.end, 'green');
+                    ctx.setLineDash([]);
+                    drawSegment(bisector.p1, bisector.p2);
+                    completeBisector(bisector)
+
+                });
+            }
+
+            // Handle canvas clicks
+            canvas.addEventListener('click', (event) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+                if (!pointO) {
+                    pointO = { x, y };
+                    drawPoint(x, y, 'O', 'red');
+                } else if (!pointP) {
+                    pointP = { x, y, direction: 1 };
+                    drawPoint(x, y, 'P', 'blue');
+                    drawExtendedLine(pointO, pointP, 'blue');
+                } else if (!pointQ) {
+                    pointQ = { x, y, direction: 1 };
+                    drawPoint(x, y, 'Q', 'blue');
+                    drawExtendedLine(pointO, pointQ, 'blue');
+                }
+            });
+
+            // Calculate the midpoint of a segment
+            function calculateMidpoint(p1, p2) {
+                return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+            }
+
+            // Calculate the perpendicular bisector of a segment and store it
+            function storeBisector(p1, p2) {
+                const midpoint = calculateMidpoint(p1, p2);
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const ux = -dy / length; // Perpendicular unit vector x
+                const uy = dx / length;  // Perpendicular unit vector y
+
+                const start = { x: midpoint.x - ux * 1000, y: midpoint.y - uy * 1000 };
+                const end = { x: midpoint.x + ux * 1000, y: midpoint.y + uy * 1000 };
+
+                bisectors.push({ start, end });
+
+            }
+
+            function storeBisectorExt(p1, p2) {
+                const midpoint = calculateMidpoint(p1, p2);
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const ux = -dy / length; // Perpendicular unit vector x
+                const uy = dx / length;  // Perpendicular unit vector y
+
+                const start = { x: midpoint.x - ux * 1000, y: midpoint.y - uy * 1000 };
+                const end = { x: midpoint.x + ux * 1000, y: midpoint.y + uy * 1000 };
+
+                bisectors.push({ start, end, p1, p2 });
+                bisCount++;
+            }
+
+            // Move the points
+           
+
+            function showSteps() {
+                const speedPerFrame = speed;//(speed / 1000) * 16; // Speed per frame (assuming ~60fps)
+
+                const lineP = { dx: pointP.x - pointO.x, dy: pointP.y - pointO.y };
+                const lineQ = { dx: pointQ.x - pointO.x, dy: pointQ.y - pointO.y };
+                const lengthP = Math.sqrt(lineP.dx ** 2 + lineP.dy ** 2);
+                const lengthQ = Math.sqrt(lineQ.dx ** 2 + lineQ.dy ** 2);
+
+                pointP.x += pointP.direction * (speedPerFrame * lineP.dx / lengthP);
+                pointP.y += pointP.direction * (speedPerFrame * lineP.dy / lengthP);
+
+                pointQ.x += pointQ.direction * (speedPerFrame * lineQ.dx / lengthQ);
+                pointQ.y += pointQ.direction * (speedPerFrame * lineQ.dy / lengthQ);
+
+                // Reverse directions if points go beyond bounds of their lines
+                if (lengthP <= 0 || lengthP >= Math.sqrt((pointP.x - pointO.x) ** 2 + (pointP.y - pointO.y) ** 2)) {
+                    pointP.direction *= -1;
+                }
+                if (lengthQ <= 0 || lengthQ >= Math.sqrt((pointQ.x - pointO.x) ** 2 + (pointQ.y - pointO.y) ** 2)) {
+                    pointQ.direction *= -1;
+                }
+
+                clearCanvas();
+                drawPoint(pointO.x, pointO.y, 'O', 'red');
+                drawPoint(pointP.x, pointP.y, 'P', 'blue');
+                drawPoint(pointQ.x, pointQ.y, 'Q', 'blue');
+                drawExtendedLine(pointO, pointP, 'blue');
+                drawExtendedLine(pointO, pointQ, 'blue');
+
+                if (bisCount == 2) {
+                    let bis0 = bisectors[0];
+                    let bis1 = bisectors[1];
+                    focus = findIntersection(bis0.start, bis0.end, bis1.start, bis1.end);
+                }
+                if (focus != null)
+                    drawPoint(focus.x, focus.y, "Focus", "red");
+
+                // Store and draw the new bisector
+                storeBisectorExt(pointP, pointQ);
+                drawBisectorsExt();
+            }
+
+            // Start the animation
+            document.getElementById('startButton').addEventListener('click', () => {
+                if (!pointO || !pointP || !pointQ) return;
+                speed = parseFloat(document.getElementById('speed').value) || 50;
+                clearInterval(animationInterval);
+                animationInterval = setInterval(showSteps, 1000); // Roughly 60fps
+            });
+
+            // Stop the animation
+            document.getElementById('stopButton').addEventListener('click', () => {
+                clearInterval(animationInterval);
+            });
+
+            document.getElementById('stepButton').addEventListener('click', () => {
+                if (!pointO || !pointP || !pointQ) return;
+                speed = parseFloat(document.getElementById('speed').value) || 50;
+                showSteps()
+            });
+            
+
+
+            drawAxes();
+
+            function drawAxes() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            function drawSegment(p1, p2, color = 'blue') {
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            function findIntersection(p1, p2, q1, q2) {
+                const a1 = p2.y - p1.y;
+                const b1 = p1.x - p2.x;
+                const c1 = a1 * p1.x + b1 * p1.y;
+
+                const a2 = q2.y - q1.y;
+                const b2 = q1.x - q2.x;
+                const c2 = a2 * q1.x + b2 * q1.y;
+
+                const determinant = a1 * b2 - a2 * b1;
+
+                if (Math.abs(determinant) < 1e-10) {
+                    return null; // Lines are parallel or coincident
+                }
+
+                const x = (b2 * c1 - b1 * c2) / determinant;
+                const y = (a1 * c2 - a2 * c1) / determinant;
+                return { x, y };
+            }
+            function completeBisector(bis) {
+                let p1 = bis.start;
+                let p2 = bis.end;
+                let x = 0;
+                let y = 0;
+                let q1 = { x, y };
+
+                y = 100;
+                let q2 = { x, y };
+
+                let m = findIntersection(p1, p2, q1, q2);
+                //draw segment from m to bis.start
+                ctx.setLineDash([]);
+                drawSegment(m, p1, 'green');
+            }
+        </script>
+</body>
+</html>
