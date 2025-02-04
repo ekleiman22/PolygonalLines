@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мэ-множества</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .definition {
+            width: 900px;
+            margin: 0 auto;
+            text-align:left
+        }
+    </style>
+</head>
+<body>
+    <h1>Поиск мэ-множеств</h1>
+    <div class="definition">
+        Назовем множество <b>эгоцентричным</b> (или э-множеством), если оно содержит
+        в качестве элемента свою мощность
+        (например, {2; 3} – э-множество, {2; 5; 8} – не э-множество).<br />
+        Э-множество назовем минимальным (или <b>мэ-множеством</b>), если
+        его собственные подмножества – не э-множества. <br />
+        Найдите подмножества множества An = {1, 2, … , n}, являющиеся
+        мэ-множествами, и их число.
+    </div>
+    <br />
+    <label for="numberInput">Введите n:</label>
+    <input type="number" id="numberInput" min="1" value="3">
+    <button onclick="findMinimalEgoSets()">Найти</button>
+    <h2>Мэ-множества:</h2>
+    <ul id="resultList"></ul>
+    <h3>Количество мэ-множеств: <span id="count"></span></h3>
+
+    <script>
+        function findMinimalEgoSets() {
+            const n = parseInt(document.getElementById('numberInput').value);
+            const minimalEgoSets = generateMinimalEgoSets(n);
+            displayResults(minimalEgoSets);
+        }
+
+        function generateMinimalEgoSets(n) {
+            if (n === 1 || n === 2) return [[1]];
+
+            let previousSets = generateMinimalEgoSets(n - 1);
+            let twoStepsBackSets = generateMinimalEgoSets(n - 2);
+
+            let modifiedSets = twoStepsBackSets.map(set => set.map(x => x + 1).concat(n));
+
+            return previousSets.concat(modifiedSets);
+        }
+
+        function displayResults(sets) {
+            const resultList = document.getElementById('resultList');
+            const countDisplay = document.getElementById('count');
+            resultList.innerHTML = '';
+            sets.forEach(set => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `{${set.join(', ')}}`;
+                resultList.appendChild(listItem);
+            });
+            countDisplay.textContent = sets.length;
+        }
+    </script>
+</body>
+</html>
