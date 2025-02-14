@@ -1,0 +1,163 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Построение золотого сечения</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px solid black;
+        }
+
+        #steps {
+            text-align: left;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Построение золотого сечения</h1>
+    <canvas id="canvas" width="600" height="400"></canvas>
+    <br>
+    <button onclick="nextStep()">Next</button>
+    <div id="steps"></div>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        let stepsDiv = document.getElementById("steps");
+        let points = [];
+        let step = 0;
+        var A, B, C, D, S;
+        let perpDx = 0;
+        let perpDy = 0;
+
+        canvas.addEventListener("click", (event) => {
+            if (points.length < 2) {
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                points.push({ x, y });
+                drawPoint(x, y, points.length === 1 ? "A" : "B");
+            }
+        });
+
+        function drawPoint(x, y, label) {
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = "black";
+            ctx.fill();
+            ctx.fillText(label, x + 8, y - 8);
+        }
+
+        function drawLine(p1, p2, color = "black") {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = color;
+            ctx.stroke();
+        }
+
+        function drawCircle(center, radius, color = "blue") {
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = color;
+            ctx.stroke();
+        }
+        //A, C - концы отрезка
+        function findCircleLineIntersection(A, C, center, R)
+        {
+            let dx = C.x - A.x;
+            let dy = C.y - A.y;
+            let x1 = A.x;
+            let y1 = A.y;
+            let x2 = C.x;
+            let y2 = C.y;
+            let x0 = center.x, y0 = center.y;
+
+            let m = dy / dx;
+            let b = y1 - m * x1;
+            let a = 1 + m * m;
+            let bCoeff = 2 * (m * b - x0 - m * y0);
+            let c = x0 * x0 + b * b - 2 * b * y0 + y0 * y0 - R * R;
+            let D = bCoeff * bCoeff - 4 * a * c;
+
+            let xA = (-bCoeff + Math.sqrt(D)) / (2 * a);
+            let xB = (-bCoeff - Math.sqrt(D)) / (2 * a);
+            let yA = m * xA + b;
+            let yB = m * xB + b;
+
+            let cand1 = { x:xA, y:yA };
+            let cand2 = { x:xB, y:yB };
+            //drawPoint(xA, yA, "1")
+            //drawPoint(xB, yB, "2")
+            if (x1 < xA && xA < x2)
+                return cand1;
+            else
+                return cand2;
+        }       
+
+        function nextStep() {
+            if (points.length < 2) {
+                alert("Выберите две точки на канвасе.");
+                return;
+            }
+
+            step++;
+            let stepText = "";
+            A = points[0];
+            B = points[1];
+           
+            switch (step) {
+                case 1:
+                    drawLine(A, B);
+                    stepText = "1. Провели отрезок AB.";
+                    break;
+                case 2:
+                    let dx = B.x - A.x;
+                    let dy = B.y - A.y;
+                    let len = Math.sqrt(dx * dx + dy * dy) / 2;
+                     perpDx = dy * (len / Math.sqrt(dx * dx + dy * dy));
+                     perpDy = -dx * (len / Math.sqrt(dx * dx + dy * dy));
+                    C = { x: B.x + perpDx, y: B.y + perpDy };
+                    drawLine(B, C, "red");
+                    drawPoint(C.x, C.y, "C");
+                    stepText = "2. Через B проведён перпендикуляр BC, длина которого равна половине AB, с поворотом по часовой стрелке.";
+                    break;
+                case 3:
+                    drawLine(A, C);
+                    stepText = "3. Проведён отрезок AC.";
+                    break;
+                case 4:
+                    drawCircle(C, Math.sqrt(perpDx * perpDx + perpDy * perpDy));
+                    stepText = "4. Проведена окружность с центром C и радиусом BC.";
+                  //  break;
+                //case 5:
+                    D = findCircleLineIntersection(A, C, C, Math.sqrt(perpDx * perpDx + perpDy * perpDy));
+                    drawPoint(D.x, D.y, "D");
+                    stepText = "4.Проведена окружность с центром C и радиусом BC и найдена точка D пересечения окружности с отрезком AC.";
+                    break;
+                case 5:
+                    let AD = Math.sqrt((A.x - D.x) ** 2 + (A.y - D.y) ** 2);
+                    drawCircle(A, AD);
+                    S = findCircleLineIntersection(A,B,A,AD)
+                    
+                    drawPoint(S.x, S.y, "S");
+                    stepText = "5. Проведена окружность радиуса AD с центром A, пересекающая AB в точке S. AS/SB - золотое сечение";
+                    break;
+                default:
+                    alert("Построение завершено!");
+                    return;
+            }
+            let stepElement = document.createElement("p");
+            stepElement.textContent = stepText;
+            stepsDiv.appendChild(stepElement);
+        }
+    </script>
+</body>
+</html>
