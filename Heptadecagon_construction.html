@@ -1,0 +1,332 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Построение правильного 17-угольника </title>
+    
+        <!--Developed by Evgeny Kleiman  based on Gauss construction
+        described in "Теория Галуа" by Н.Г.Чеьотарев--> 
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px solid black;
+            background: #f9f9f9;
+        }
+        .flex-container {
+            display: flex;
+            flex-direction: row;
+        }
+        #controls {
+            text-align: center;
+            margin-top: 10px;
+        }
+        p {
+            margin: 0px 10px 0px 0px;
+            text-align:left
+        }
+    </style>
+</head>
+<body>
+    <h1>Построение правильного 17-угольника с помощью циркуля и линейки</h1>
+    <div class="flex-container">
+        <div id="divText" style="width:400px">
+            
+        </div>
+        <canvas id="canvas" width="1000" height="600"></canvas>
+        
+    </div>
+    <div id="controls">
+       
+        <button onclick="nextStep()">Next</button>
+    </div>
+    <script>
+        var messages = [];
+        messages[0] = "1. Проведем горизонтальную прямую, помеченную на концах U, V и в середине отметим точку O."
+        messages[1] = "2. Восстановим перпендикуляр к прямой UV в точке О и отложим на нем вниз отрезок ОА, равный единице длины.";
+        messages[2] = "3. Отметим точку C на расстоянии 1 / 4 длины слева от точки О";
+        messages[3] = "4.Из С, как из центра, проведем окружность радиуса СА, пересекающую UV в точках В и D. ";
+        messages[4] = "5.Проведем прямую АВ, и из В, как из центра, проведем  окружность радиуса ВО, пересекающую АВ в точках Р и М."; 
+        messages[5] = "6. Проведем прямую AD и из D, как из центра, проведем окружность радиуса DO, пересекающую AD в точках N, Q.";
+        messages[6] = "7. На прямой AD отметим точку L на расстоянии NO от A, так, чтобы A было между D и L.";
+        messages[6] += "Другими словами: из A как из центра описать окружность радиуса NO и взять в качестве L точку пересечения.";
+        messages[7] = "8. На NL как на диаметре построим  окружность, которая пересекается с АВ в точке F."; 
+        messages[8] = "9.Из F, как из центра, проведем окружность радиуса AI = АМ / 2. Эта окружность пересекает AD в точке G.";
+        messages[9] = "10.Из G, как из центра, проведем окружность радиуса АМ / 2, которая пересечет AD в точках К и Н. ";
+        messages[9] += "(Отрезок AK выделен красным )";
+        messages[10] ="11. Запомним длину отрезка AK.Очистим канвас, нарисуем круг радиуса единица и нанесем на круг  17 точек с расстоянием между каждыми двумя, равным 2 * (длина AK)."
+                
+       
+    </script>
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        let step = 0;
+        const unit = 150;
+        let points = {};
+        let A, C, O, B, D;
+        let AK_length = 0;
+
+        function drawPoint(x, y, label) {
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, 2 * Math.PI);
+            ctx.fillStyle = "black";
+            ctx.fill();
+            ctx.font = "20px Verdana";
+            ctx.fillText(label, x + 5, y - 5);
+
+        }
+
+        function drawLine(x1, y1, x2, y2, color = "black", width = 1) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.stroke();
+        }
+
+        function drawCircle(x, y, r, color = "blue") {
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, 2 * Math.PI);
+            ctx.strokeStyle = color;
+            ctx.stroke();
+        }
+        //function chordToAngle(chord, radius) {
+        //    return 2 * Math.asin(chord / (2 * radius));
+        //}
+        function findCircleLineIntersection(A, C, center, R) {
+            let dx = C.x - A.x;
+            let dy = C.y - A.y;
+            let x1 = A.x;
+            let y1 = A.y;
+            let x2 = C.x;
+            let y2 = C.y;
+            let x0 = center.x, y0 = center.y;
+
+            let m = dy / dx;
+            let b = y1 - m * x1;
+            let a = 1 + m * m;
+            let bCoeff = 2 * (m * b - x0 - m * y0);
+            let c = x0 * x0 + b * b - 2 * b * y0 + y0 * y0 - R * R;
+            let D = bCoeff * bCoeff - 4 * a * c;
+
+            let xA = (-bCoeff + Math.sqrt(D)) / (2 * a);
+            let xB = (-bCoeff - Math.sqrt(D)) / (2 * a);
+            let yA = m * xA + b;
+            let yB = m * xB + b;
+
+            let cand1 = { x: xA, y: yA };
+            let cand2 = { x: xB, y: yB };
+            return [cand1, cand2];
+        }
+
+        function findCirclesIntersection(circles) {
+            let x1 = circles[0].center.x;
+            let y1 = circles[0].center.y;
+            let x2 = circles[1].center.x;
+            let y2 = circles[1].center.y;
+            let r1 = circles[0].radius;
+            let r2 = circles[1].radius;
+
+            let d = distance(circles[0].center, circles[1].center);
+            let l = (r1 ** 2 - r2 ** 2 + d ** 2) / (2 * d);
+            let h = Math.sqrt(r1 ** 2 - l ** 2);
+
+            let u = l / d * (x2 - x1) + h / d * (y2 - y1) + x1;
+            let v = l / d * (y2 - y1) - h / d * (x2 - x1) + y1;
+            let p1 = { x: u, y: v };
+
+            u = l / d * (x2 - x1) - h / d * (y2 - y1) + x1;
+            v = l / d * (y2 - y1) + h / d * (x2 - x1) + y1;
+            let p2 = { x: u, y: v };
+            return [p1, p2];
+        }
+
+        function distance(p1, p2) {
+            return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+        }
+        function nextStep() {
+            step++;
+            //ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            O = { x: 500, y: 300 };
+            points.O = O;
+            const U = { x: O.x - 3 * unit, y: O.y };
+            const V = { x: O.x + 3 * unit, y: O.y };
+
+            switch (step) {
+                case 1:
+                    drawLine(U.x, U.y, V.x, V.y);
+                    drawPoint(U.x, U.y, "U");
+                    drawPoint(V.x, V.y, "V");
+                    drawPoint(O.x, O.y, "O");
+                    break;
+                case 2:
+                    A = { x: O.x, y: O.y + unit };
+                    points.A = A;
+                    drawLine(O.x, O.y, A.x, A.y);
+                    drawPoint(A.x, A.y, "A");
+                    break;
+                case 3:
+                    C = { x: O.x - unit / 4, y: O.y };
+                    points.C = C;
+                    drawPoint(C.x, C.y, "C");
+                    break;
+                case 4:
+                    let R0 = distance(C, A);
+                    points.C = C;
+                    drawPoint(C.x, C.y, "C");
+                    drawCircle(C.x, C.y, R0);
+                    B = { x: C.x + unit, y: C.y };
+                    D = { x: C.x - unit, y: C.y };
+                    points.B = B;
+                    points.D = D;
+                    drawPoint(B.x, B.y, "B");
+                    drawPoint(D.x, D.y, "D");
+                    break;
+                    break;
+                case 5:
+
+                    let R = Math.abs(points.B.x - O.x)
+                    drawLine(points.A.x, points.A.y, points.B.x, points.B.y);
+                    drawCircle(points.B.x, points.B.y, R);
+
+                    let PM = findCircleLineIntersection(A, B, B, R)
+                    let M = PM[0];
+                    let P = PM[1];
+
+                    points.P = P;
+                    points.M = M;
+                    drawPoint(P.x, P.y, "P");
+                    drawPoint(M.x, M.y, "M");
+                    //continue AB
+                    drawLine(A.x, A.y, M.x, M.y);
+                    break;
+                case 6:
+
+                    let R1 = Math.abs(points.D.x - points.O.x)
+                    drawLine(points.A.x, points.A.y, points.D.x, points.D.y);
+                    drawCircle(points.D.x, points.D.y, R1);
+
+                    let NQ = findCircleLineIntersection(A, D, D, R1)
+                    let N = NQ[0];
+                    let Q = NQ[1];
+
+                    points.N = N;
+                    points.Q = Q;
+                    drawPoint(N.x, N.y, "N");
+                    drawPoint(Q.x, Q.y, "Q");
+                    //continue AQ
+                    drawLine(A.x, A.y, Q.x, Q.y);
+                    break;
+                case 7:
+
+                    let R2 = distance(points.N, points.O);
+                    drawCircle(points.A.x, points.A.y, R2);
+                    let L1L2 = findCircleLineIntersection(A, D, A, R2)
+                    let L1 = L1L2[0];
+                    let L2 = L1L2[1];
+                    points.L = L1;
+                    points.L2 = L2;
+                    drawPoint(L1.x, L1.y, "L");
+                    //drawPoint(L2.x, L2.y, "L2");
+                    //continue QL
+                    drawLine(A.x, A.y, L1.x, L1.y);
+                    break;
+                case 8:
+                    //Find mid point of segment NL:
+                    let C1 = {
+                        x: (points.N.x + points.L.x) / 2,
+                        y: (points.N.y + points.L.y) / 2,
+                    }
+                    let R3 = distance(C1, points.N);
+                    drawCircle(C1.x, C1.y, R3);
+                    let F1F2 = findCircleLineIntersection(A, B, C1, R3)
+                    let F1 = F1F2[0];
+                    let F2 = F1F2[1];
+                    //drawPoint(F1.x, F1.y, "F1");
+                    drawPoint(F2.x, F2.y, "F");
+                    points.F = F2;
+                    //continue PFL
+                    drawLine(F1.x, F1.y, F2.x, F2.y);
+                    break;
+                case 9:
+                    let R4 = distance(points.A, points.M) / 2;
+                    drawCircle(points.F.x, points.F.y, R4);
+                    let G1G2 = findCircleLineIntersection(points.A, points.D, points.F, R4)
+                    let G1 = G1G2[0];
+                    let G2 = G1G2[1];
+                    //drawPoint(G1.x, G1.y, "G1");
+                    drawPoint(G2.x, G2.y, "G");
+                    points.G = G2;
+
+                    break;
+                case 10:
+                    let R5 = distance(points.A, points.M) / 2;
+                    drawCircle(points.G.x, points.G.y, R5);
+                    let KH = findCircleLineIntersection(points.A, points.D, points.G, R5)
+                    let K = KH[0];
+                    let H = KH[1];
+                    points.K = K;
+                    drawPoint(K.x, K.y, "K");
+                    drawPoint(H.x, H.y, "H");
+                    drawLine(K.x, K.y, points.A.x, points.A.y, "red", 5);
+                    break;
+                case 11:
+                    let rad = distance(points.A, points.K) * 2;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.lineWidth = 1;
+                    drawCircle(O.x, O.y, unit);
+                    drawPoint(O.x + unit, O.y, 1);
+                    let center = { x: O.x, y: O.y };
+                    let mainCircle = new Circle(center, unit);
+                    let firstPoint = { x: O.x + unit, y: O.y };
+                    let lastPoint = { x: O.x + unit, y: O.y };
+                    let circles = [];
+                    circles[0] = mainCircle;
+                    for (let i = 1; i < 17; i++) {
+                        circles[1] = new Circle(lastPoint, rad)
+                        let points = findCirclesIntersection(circles);
+                        drawPoint(points[0].x, points[0].y, i + 1);
+                        let newPoint = points[0];
+                        drawLine(lastPoint.x, lastPoint.y, newPoint.x, newPoint.y);
+                        lastPoint = newPoint;
+                    }
+                    drawLine(lastPoint.x, lastPoint.y, firstPoint.x, firstPoint.y);
+
+                    //let angleStep = chordToAngle(AK_length, unit);
+                    //let startAngle = Math.random() * 2 * Math.PI;
+                    //let currentAngle = startAngle;
+                    //for (let i = 0; i < 17; i++) {
+                    //    let x = O.x + unit * Math.cos(currentAngle);
+                    //    let y = O.y + unit * Math.sin(currentAngle);
+                    //    drawPoint(x, y, i + 1);
+                    //    currentAngle += angleStep;
+                    //}
+
+                    break;
+                default:
+                    alert("Построение завершено!");
+                    break;
+            }
+            let stepElement = document.createElement("p");
+            stepElement.textContent = messages[step-1];
+            divText.appendChild(stepElement);
+        }
+    </script>
+    <script>
+        class Circle {
+            constructor(center, r) {
+                this.center = center;
+                this.radius = r;
+            }
+        }
+    </script>
+</body>
+</html>
