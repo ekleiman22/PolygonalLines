@@ -38,6 +38,12 @@
             <button onclick="addRectangle()">Add Rectangle</button>
             <button onclick="calculateArea()">Calculate Area</button>
             <button onclick="clearCanvas()">Clear</button>
+            <p style="text-align:left">
+                Rectangles can be added in one of two ways:<br/>
+                either by specifying the coordinates of the corners in the text boxes,<br/>
+                or by clicking on the map in where the corners should be.<br/>
+                In the first way, the pixel dimensions are multiplied by 10 for clarity.
+            </p>
             <p><strong>Total Union Area:</strong> <span id="result">0</span></p>
             <p>
                 <textarea id="txtRectangles" rows="5" cols="20"></textarea>
@@ -66,9 +72,28 @@ Update the total area based on x-interval.
 Manage active y-intervals manually using an array.
         */
         let rectangles = [];
+        let vertices = [];
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
         var unit = 10;
+        window.onload = () => {
+           
+
+            // Event listener for mouse clicks to define triangle vertices
+            canvas.addEventListener('click', handleCanvasClick);
+        }
+        function handleCanvasClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            vertices.push({ x, y });
+            //drawPointWithLabel(x, y, `P${vertices.length}`);
+
+            if (vertices.length == 2) {
+                drawRectangle();
+                vertices = [];
+            }
+        }
 
         function addRectangle() {
             let x1 = parseInt(document.getElementById("x1").value);
@@ -88,6 +113,15 @@ Manage active y-intervals manually using an array.
             rectangles.push([x1, y1, x2, y2]);
             drawRectangles();
             txtRectangles.value += x1+" "+ y1+" "+ x2 +" "+ y2+"\r\n"
+        }
+
+        function drawRectangle() {
+            ctx.strokeStyle = "blue";
+            let [x1, y1] = [Math.floor(vertices[0].x), Math.floor(vertices[0].y)];
+            let [x2, y2] = [Math.floor(vertices[1].x), Math.floor(vertices[1].y)];
+            rectangles.push([x1, y1, x2, y2]);
+            ctx.strokeRect(x1 , y1 , (x2 - x1) , (y2 - y1) );
+            txtRectangles.value += x1 + " " + y1 + " " + x2 + " " + y2 + "\r\n"
         }
 
         function drawRectangles() {
