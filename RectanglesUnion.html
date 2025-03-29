@@ -1,0 +1,158 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rectangle Union Area Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px solid black;
+            margin-top: 10px;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .controls {
+            margin-right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Union Area of Rectangles</h2>
+
+    <div class="container">
+        <div class="controls">
+            <label>Left-Top X: <input type="number" id="x1" min="0"></label><br>
+            <label>Left-Top Y: <input type="number" id="y1" min="0"></label><br>
+            <label>Right-Bottom X: <input type="number" id="x2" min="0"></label><br>
+            <label>Right-Bottom Y: <input type="number" id="y2" min="0"></label><br>
+            <button onclick="addRectangle()">Add Rectangle</button>
+            <button onclick="calculateArea()">Calculate Area</button>
+            <button onclick="clearCanvas()">Clear</button>
+            <p><strong>Total Union Area:</strong> <span id="result">0</span></p>
+            <p>
+                <textarea id="txtRectangles" rows="5" cols="20"></textarea>
+            </p>
+        </div>
+        <canvas id="canvas" width="700" height="600"></canvas>
+    </div>
+
+    <script>
+        /*
+        The Line Sweep Algorithm with Active Intervals (Segment Tree / Balanced Tree) is the standard method to solve this problem efficiently.
+We sweep a vertical line from left to right, tracking the active y-intervals. Every time we reach a new vertical edge:
+
+1.Compute the contribution to the area using the active y-intervals.
+2.Update the active y-intervals (either adding or removing intervals).
+3.Move to the next vertical event.
+
+Algorithm Overview
+Create Events for all rectangles:
+Opening event: (x1, y1, y2, +1)
+Closing event: (x2, y1, y2, -1)
+Sort events by x coordinate (if x is the same, process closing events first).
+Sweep from left to right:
+Compute the active y-union length at each step.
+Update the total area based on x-interval.
+Manage active y-intervals manually using an array.
+        */
+        let rectangles = [];
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        var unit = 10;
+
+        function addRectangle() {
+            let x1 = parseInt(document.getElementById("x1").value);
+            let y1 = parseInt(document.getElementById("y1").value);
+            let x2 = parseInt(document.getElementById("x2").value);
+            let y2 = parseInt(document.getElementById("y2").value);
+
+            if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+                alert("Please enter valid coordinates!");
+                return;
+            }
+
+            // Ensure (x1, y1) is top-left and (x2, y2) is bottom-right
+            if (x1 > x2) [x1, x2] = [x2, x1];
+            if (y1 > y2) [y1, y2] = [y2, y1];
+
+            rectangles.push([x1, y1, x2, y2]);
+            drawRectangles();
+            txtRectangles.value += x1+" "+ y1+" "+ x2 +" "+ y2+"\r\n"
+        }
+
+        function drawRectangles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "blue";
+            rectangles.forEach(([x1, y1, x2, y2]) => {
+                ctx.strokeRect(x1 * unit, y1 * unit, (x2 - x1) * unit, (y2 - y1) * unit);
+            });
+        }
+
+        function calculateArea() {
+            let area = calculateUnionArea(rectangles);
+            document.getElementById("result").innerText = area;
+        }
+
+        function clearCanvas() {
+            rectangles = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById("result").innerText = "0";
+            txtRectangles.value = "";
+        }
+
+        function calculateUnionArea(rectangles) {
+            let events = [];
+            for (let [x1, y1, x2, y2] of rectangles) {
+                events.push([x1, y1, y2, 1]);
+                events.push([x2, y1, y2, -1]);
+            }
+
+            events.sort((a, b) => a[0] - b[0] || a[3] - b[3]);
+
+            function computeYUnion(intervals) {
+                intervals.sort((a, b) => a[0] - b[0]);
+                let totalLength = 0, prevY = -Infinity;
+                for (let [y1, y2] of intervals) {
+                    if (y1 > prevY) {
+                        totalLength += (y2 - y1);
+                    } else {
+                        totalLength += Math.max(0, y2 - prevY);
+                    }
+                    prevY = Math.max(prevY, y2);
+                }
+                return totalLength;
+            }
+
+            let activeIntervals = [];
+            let prevX = events[0][0];
+            let totalArea = 0;
+
+            for (let [x, y1, y2, eventType] of events) {
+                if (activeIntervals.length > 0) {
+                    let yLength = computeYUnion(activeIntervals);
+                    totalArea += yLength * (x - prevX);
+                }
+
+                if (eventType === 1) {
+                    activeIntervals.push([y1, y2]);
+                } else {
+                    activeIntervals = activeIntervals.filter(interval => interval[0] !== y1 || interval[1] !== y2);
+                }
+
+                prevX = x;
+            }
+            return totalArea;
+        }
+    </script>
+</body>
+</html>
