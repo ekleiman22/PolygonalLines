@@ -1,0 +1,73 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+   <meta charset="UTF-8">  
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+   <title>Palindromic Substrings</title>  
+   <script>  
+       function countPalindromicSubstrings(word) {  
+           const n = word.length;  
+           const dictCount = new Map();  
+
+           // Initialize dictionary with keys and default values  
+           for (let i = 0; i < n; i++) {  
+               for (let j = i; j < n; j++) {  
+                   const key = i * n + j;  
+                   dictCount.set(key, 0);  
+               }  
+           }  
+
+           // Each character is a palindrome of length 1  
+           for (let i = 0; i < n; i++) {  
+               dictCount.set(i * n + i, 1);  
+           }  
+
+           for (let i = 1; i < n; i++) {  
+               const lastChar = word[i];  
+
+               for (let j = i - 1; j >= 0; j--) {  
+                   const key = j * n + i;  
+
+                   if (j === i - 1) { // 2-letter substring  
+                       if (word[j] === lastChar) {  
+                           dictCount.set(key, 3);  
+                       } else {  
+                           dictCount.set(key, 2);  
+                       }  
+                   } else {  
+                       if (word[j] !== lastChar) {  
+                           dictCount.set(key,  
+                               dictCount.get(j * n + (i - 1)) +  
+                               dictCount.get((j + 1) * n + i) -  
+                               dictCount.get((j + 1) * n + (i - 1))  
+                           );  
+                       } else {  
+                           dictCount.set(key,  
+                               dictCount.get(j * n + (i - 1)) +  
+                               dictCount.get((j + 1) * n + i) + 1  
+                           );  
+                       }  
+                   }  
+               }  
+           }  
+
+           return dictCount.get(n - 1);  
+       }  
+
+       function handleSubmit() {  
+           const input = document.getElementById("wordInput").value;  
+           const result = countPalindromicSubstrings(input);  
+           document.getElementById("result").textContent = `Number of palindromic substrings: ${result}`;  
+       }  
+   </script>  
+</head>  
+<body>  
+   <h1>Palindromic Substrings Counter</h1>  
+   <form onsubmit="event.preventDefault(); handleSubmit();">  
+       <label for="wordInput">Enter a word:</label>  
+       <input type="text" style="width:600px" id="wordInput" required>  
+       <button type="submit">Count</button>  
+   </form>  
+   <p id="result"></p>  
+</body>  
+</html>
